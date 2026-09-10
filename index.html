@@ -1,727 +1,406 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="h-full bg-slate-950 text-slate-100">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visor de Proceso BPMN - Taller de Confecciones</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        bizagi: {
-                            blue: '#00529B',
-                            lightBlue: '#E6F0FA',
-                            green: '#28A745',
-                            yellow: '#FFC107',
-                            red: '#DC3545',
-                            gray: '#F4F6F9',
-                            dark: '#0F172A'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        /* Custom BPMN Canvas Styling */
-        .bpmn-node {
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-        }
-        .bpmn-node:hover {
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 10px 18px -4px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-        .bpmn-node.active-step {
-            ring: 4px;
-            animation: pulse-border 1.5s infinite;
-        }
-        @keyframes pulse-border {
-            0% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.8); }
-            70% { box-shadow: 0 0 0 12px rgba(14, 165, 233, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); }
-        }
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #94a3b8;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #64748b;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visor de Procesos: As-Is vs To-Be - MONCAL Confecciones</title>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Font Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-dark: #020617;
+      --card-bg: #0f172a;
+      --card-border: #1e293b;
+      --primary: #38bdf8;
+      
+      --asis-color: #f59e0b;
+      --asis-border: #d97706;
+      --asis-badge-bg: rgba(245, 158, 11, 0.15);
+      
+      --tobe-color: #38bdf8;
+      --tobe-border: #0284c7;
+      --tobe-badge-bg: rgba(56, 189, 248, 0.15);
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-radius: 16px;
+      --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      padding: 2rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-image: radial-gradient(#334155 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--primary);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 0.35rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+
+    header h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.025em;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .processes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+      gap: 2rem;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .process-card {
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--card-border);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+
+    .process-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .card-asis:hover { 
+      border-color: var(--asis-border); 
+      box-shadow: 0 12px 28px -5px rgba(245, 158, 11, 0.25);
+    }
+    
+    .card-tobe:hover { 
+      border-color: var(--tobe-border); 
+      box-shadow: 0 12px 28px -5px rgba(56, 189, 248, 0.25);
+    }
+
+    .card-header {
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--card-border);
+      background: rgba(15, 23, 42, 0.8);
+    }
+
+    .card-title-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .card-asis .card-icon {
+      background: var(--asis-badge-bg);
+      color: var(--asis-color);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .card-tobe .card-icon {
+      background: var(--tobe-badge-bg);
+      color: var(--tobe-color);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .card-header h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .badge {
+      padding: 0.35rem 0.85rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.025em;
+    }
+
+    .badge-asis { 
+      background-color: var(--asis-badge-bg); 
+      color: var(--asis-color);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+    
+    .badge-tobe { 
+      background-color: var(--tobe-badge-bg); 
+      color: var(--tobe-color);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+
+    .iframe-preview-container {
+      width: 100%;
+      height: 420px;
+      position: relative;
+      background: #020617;
+      overflow: hidden;
+    }
+
+    .iframe-preview-container iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      pointer-events: none;
+      opacity: 0.9;
+      transition: opacity 0.3s ease;
+    }
+
+    .process-card:hover .iframe-preview-container iframe {
+      opacity: 1;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(2, 6, 23, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: all 0.25s ease;
+      backdrop-filter: blur(2px);
+    }
+
+    .process-card:hover .overlay {
+      opacity: 1;
+      background: rgba(2, 6, 23, 0.45);
+    }
+
+    .btn-expand {
+      background: #0f172a;
+      color: #ffffff;
+      border: 1px solid var(--card-border);
+      padding: 0.75rem 1.5rem;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .card-asis .btn-expand { border-color: var(--asis-border); }
+    .card-tobe .btn-expand { border-color: var(--tobe-border); }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(2, 6, 23, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      padding: 1rem;
+    }
+
+    .modal-content {
+      background: #0f172a;
+      width: 98vw;
+      height: 95vh;
+      border-radius: var(--border-radius);
+      border: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    }
+
+    .modal-header {
+      padding: 0.85rem 1.25rem;
+      background: #090d16;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .modal-header h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .close-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .close-btn:hover {
+      background: #ef4444;
+      color: #ffffff;
+      border-color: #ef4444;
+    }
+
+    .modal-body {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      background: #020617;
+    }
+
+    .modal-body iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+  </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col antialiased selection:bg-blue-500 selection:text-white">
+<body>
 
-    <!-- TOP NAVBAR -->
-    <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-inner">
-                    <i class="fa-solid fa-diagram-project"></i>
-                </div>
-                <div>
-                    <h1 class="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
-                        Mapa de Procesos BPMN
-                        <span class="text-[11px] bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full font-medium">4 Roles • 7 Fases</span>
-                    </h1>
-                    <p class="text-xs text-slate-400">Taller de Confecciones - Cadena Operativa & Facturación</p>
-                </div>
-            </div>
+  <header>
+    <div class="header-badge">
+      <i class="fa-solid fa-diagram-project"></i> Ingeniería de Procesos MONCAL BPMN 2.0
+    </div>
+    <h1>TALLER DE CONFECCIONES</h1>
+    <p>Comparativa interactiva entre el flujo actual con cuellos de botella (As-Is) y la propuesta optimizada (To-Be)</p>
+    
+</header>
 
-            <!-- Toolbar Controls -->
-            <div class="flex items-center space-x-2">
-                <button onclick="startSimulation()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-md text-xs font-semibold flex items-center space-x-1.5 transition shadow-sm">
-                    <i class="fa-solid fa-play"></i>
-                    <span class="hidden sm:inline">Simular Pedido</span>
-                </button>
-
-                <button onclick="resetSimulation()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-md text-xs font-semibold flex items-center space-x-1.5 transition">
-                    <i class="fa-solid fa-rotate-left"></i>
-                    <span class="hidden sm:inline">Reiniciar</span>
-                </button>
-
-                <div class="h-6 w-px bg-slate-700 mx-1"></div>
-
-            </div>
+  <main class="processes-grid">
+    <!-- TARJETA AS-IS -->
+    <div class="process-card card-asis" onclick="openModal('proceso-as-is-confecciones.html', 'Proceso As-Is (Estado Actual)')">
+      <div class="card-header">
+        <div class="card-title-group">
+          <div class="card-icon">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <h2>Proceso As-Is</h2>
         </div>
-    </header>
-
-    <!-- CONTROLS & LEGEND BAR -->
-    <div class="bg-white border-b border-slate-200 py-2.5 px-4 sm:px-8 shadow-sm sticky top-16 z-20">
-        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-            <!-- Phase Filter -->
-            <div class="flex items-center space-x-2">
-                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Filtrar Fase:</span>
-                <select id="phaseFilter" onchange="filterByPhase(this.value)" class="text-xs border border-slate-300 rounded-lg px-3 py-1.5 bg-slate-50 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="ALL">Todas las Fases (1 a 7)</option>
-                    <option value="1">Fase 1: Cotización y Tizado</option>
-                    <option value="2">Fase 2: Compras y Despacho Tela</option>
-                    <option value="3">Fase 3: Tendido y Corte</option>
-                    <option value="4">Fase 4: Bordado y Estampado</option>
-                    <option value="5">Fase 5: Confección y QA In Situ</option>
-                    <option value="6">Fase 6: Acopio, Empaque y Despacho</option>
-                    <option value="7">Fase 7: Guía Firmada y Facturación</option>
-                </select>
-            </div>
-
-            <!-- BPMN Notation Legend -->
-            <div class="flex flex-wrap items-center gap-3 text-xs text-slate-600">
-                <span class="flex items-center space-x-1.5">
-                    <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 inline-block border border-emerald-700"></span>
-                    <span class="font-medium">Inicio</span>
-                </span>
-                <span class="flex items-center space-x-1.5">
-                    <span class="w-4 h-3 bg-white border border-slate-400 rounded-sm inline-block shadow-xs"></span>
-                    <span class="font-medium">Actividad / Tarea</span>
-                </span>
-                <span class="flex items-center space-x-1.5">
-                    <span class="w-3.5 h-3.5 bg-amber-100 border-2 border-amber-500 rotate-45 inline-block"></span>
-                    <span class="font-medium">Hito / Control QA</span>
-                </span>
-                <span class="flex items-center space-x-1.5">
-                    <span class="w-3.5 h-3.5 rounded-full bg-indigo-600 inline-block border-2 border-indigo-900"></span>
-                    <span class="font-medium">Fin Proceso</span>
-                </span>
-            </div>
+        <span class="badge badge-asis">Estado Actual / Diagnóstico</span>
+      </div>
+      <div class="iframe-preview-container">
+        <iframe src="proceso-as-is-confecciones.html" scrolling="no"></iframe>
+        <div class="overlay">
+          <span class="btn-expand">
+            <i class="fa-solid fa-magnifying-glass-plus"></i> Expandir Diagrama As-Is
+          </span>
         </div>
+      </div>
     </div>
 
-    <!-- MAIN CANVAS CONTAINER -->
-    <main class="flex-1 p-4 sm:p-6 overflow-auto">
-        <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden flex flex-col min-w-[1150px]">
-            
-            <!-- SWIMLANES HEADER COLUMNS -->
-            <div class="grid grid-cols-[180px_1fr] bg-slate-900 text-white border-b border-slate-800 font-bold text-xs py-2.5 px-3">
-                <div class="text-center tracking-wider uppercase text-slate-300 border-r border-slate-800 flex items-center justify-center">
-                    Rol / Responsable
-                </div>
-                <div class="grid grid-cols-7 text-center divide-x divide-slate-800 text-slate-200 text-[11px] font-semibold">
-                    <div class="p-1">Fase 1: Cotización</div>
-                    <div class="p-1">Fase 2: Compras</div>
-                    <div class="p-1">Fase 3: Corte</div>
-                    <div class="p-1">Fase 4: Bordado</div>
-                    <div class="p-1">Fase 5: Confección</div>
-                    <div class="p-1">Fase 6: Despacho</div>
-                    <div class="p-1">Fase 7: Facturación</div>
-                </div>
-            </div>
-
-            <!-- SWIMLANE 1: GESTOR COMERCIAL Y TÉCNICO (GCT) -->
-            <div class="swimlane grid grid-cols-[180px_1fr] border-b border-slate-200 min-h-[180px] bg-slate-50/50 hover:bg-slate-50 transition">
-                <div class="bg-indigo-950 text-indigo-100 p-3 flex flex-col justify-center items-center text-center border-r border-slate-300">
-                    <i class="fa-solid fa-user-gear text-2xl mb-1 text-indigo-300"></i>
-                    <span class="font-bold text-xs uppercase tracking-wide">Gestor Comercial y Técnico</span>
-                    <span class="text-[9px] text-emerald-200 mt-0.5 leading-tight text-center">Cuenca</span>
-                    <span class="text-[10px] bg-indigo-800 text-indigo-200 px-2 py-0.5 rounded-full mt-1 font-mono font-semibold">GCT</span>
-                </div>
-                <div class="p-3 grid grid-cols-7 gap-2 items-center relative">
-
-                    <!-- Fase 1: Cotización (Stacked Node 1.1 and 1.2 in Phase 1 Column) -->
-                    <div class="flex flex-col space-y-2 justify-center" data-phase="1">
-                        <!-- Node 1: Recibe Solicitud & Tizado -->
-                        <div onclick="showDetails(1)" class="bpmn-node bg-white border-2 border-emerald-500 hover:border-emerald-600 text-slate-800 p-2 rounded-lg shadow-sm text-center w-full" id="node-1">
-                            <div class="flex items-center justify-between text-[10px] text-emerald-600 font-bold mb-0.5">
-                                <span><i class="fa-solid fa-circle-play"></i> Inicio</span>
-                                <span>1.1</span>
-                            </div>
-                            <p class="text-[10.5px] font-bold leading-tight text-slate-800">Recibir Solicitud del Cliente y Tizado</p>
-                            <p class="text-[9px] text-slate-500 mt-0.5">Cálculo metraje exacto</p>
-                        </div>
-
-                        <!-- Node 2: Cotización ERP -->
-                        <div onclick="showDetails(2)" class="bpmn-node bg-white border border-indigo-200 hover:border-indigo-400 text-slate-800 p-2 rounded-lg shadow-sm text-center w-full" id="node-2">
-                            <div class="flex items-center justify-between text-[10px] text-indigo-600 font-bold mb-0.5">
-                                <span><i class="fa-solid fa-laptop-code"></i> ERP</span>
-                                <span>1.2</span>
-                            </div>
-                            <p class="text-[10.5px] font-semibold leading-tight text-slate-800">Precios Unitarios y Cotización ERP</p>
-                        </div>
-                    </div>
-
-                    <!-- Fase 2: Node 3: Solicitud de Compras de Tela -->
-                    <div class="flex justify-center" data-phase="2">
-                        <div onclick="showDetails(3)" class="bpmn-node bg-white border border-indigo-200 hover:border-indigo-400 text-slate-800 p-2.5 rounded-lg shadow-sm text-center w-full" id="node-3">
-                            <div class="flex items-center justify-between text-[10px] text-indigo-600 font-bold mb-1">
-                                <span><i class="fa-solid fa-cart-shopping"></i> Compras</span>
-                                <span>2.1</span>
-                            </div>
-                            <p class="text-[11px] font-semibold leading-tight text-slate-800">Gestión de Compra de Tela</p>
-                            <p class="text-[9px] text-slate-500 mt-1">Nabila/PeruPima/Gamarra</p>
-                        </div>
-                    </div>
-
-                    <div class="col-span-4 flex items-center justify-center text-slate-400 text-xs font-light tracking-widest text-center px-2">
-                        --- Apoyo al ATP en estas fases de Corte, Bordado, Confección y Despacho ---
-                    </div>
-
-                    <!-- Fase 7: Node 11: Solicitud de Facturación -->
-                    <div class="flex justify-center" data-phase="7">
-                        <div onclick="showDetails(11)" class="bpmn-node bg-white border-2 border-indigo-600 hover:border-indigo-700 text-slate-800 p-2.5 rounded-lg shadow-sm text-center w-full" id="node-11">
-                            <div class="flex items-center justify-between text-[10px] text-indigo-600 font-bold mb-1">
-                                <span><i class="fa-solid fa-file-invoice-dollar"></i> Cierre</span>
-                                <span>7.2</span>
-                            </div>
-                            <p class="text-[11px] font-bold leading-tight text-slate-800">Solicitar Facturación a Contabilidad</p>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
-            <!-- SWIMLANE 2: PROVEEDORES DE TELA -->
-            <div class="swimlane grid grid-cols-[180px_1fr] border-b border-slate-200 min-h-[140px] bg-white hover:bg-slate-50 transition">
-                <div class="bg-amber-950 text-amber-100 p-3 flex flex-col justify-center items-center text-center border-r border-slate-300">
-                    <i class="fa-solid fa-truck-field text-2xl mb-1 text-amber-300"></i>
-                    <span class="font-bold text-xs uppercase tracking-wide">Proveedores de Tela</span>
-                    <span class="text-[9px] text-amber-200 mt-0.5 leading-tight text-center">Nabila / Perú Pima / Gamarra</span>
-                    <span class="text-[10px] bg-amber-800 text-amber-100 px-2 py-0.5 rounded-full mt-1 font-mono font-semibold">PROV</span>
-                </div>
-                <div class="p-3 grid grid-cols-7 gap-2 items-center relative">
-                    <div class="col-span-1"></div>
-
-                    <!-- Node 4: Despacho de Tela -->
-                    <div class="flex justify-center" data-phase="2">
-                        <div onclick="showDetails(4)" class="bpmn-node bg-white border border-amber-300 hover:border-amber-500 text-slate-800 p-2.5 rounded-lg shadow-sm text-center w-full" id="node-4">
-                            <div class="flex items-center justify-between text-[10px] text-amber-700 font-bold mb-1">
-                                <span><i class="fa-solid fa-truck-ramp-box"></i> Despacho</span>
-                                <span>2.2</span>
-                            </div>
-                            <p class="text-[11px] font-semibold leading-tight text-slate-800">Despacho de Tela a Talleres o Planta</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SWIMLANE 3: CONFECCIONISTAS Y TALLERES EXTERNOS -->
-            <div class="swimlane grid grid-cols-[180px_1fr] border-b border-slate-200 min-h-[140px] bg-slate-50/50 hover:bg-slate-50 transition">
-                <div class="bg-teal-950 text-teal-100 p-3 flex flex-col justify-center items-center text-center border-r border-slate-300">
-                    <i class="fa-solid fa-shirt text-2xl mb-1 text-teal-300"></i>
-                    <span class="font-bold text-xs uppercase tracking-wide">Confeccionistas</span>
-                    <span class="text-[9px] text-teal-200 mt-0.5 leading-tight text-center">Jhon / Alcides / Chorrillos</span>
-                    <span class="text-[10px] bg-teal-800 text-teal-100 px-2 py-0.5 rounded-full mt-1 font-mono font-semibold">CONF</span>
-                </div>
-                <div class="p-3 grid grid-cols-7 gap-2 items-center relative">
-                    <div class="col-span-3"></div>
-
-                    <!-- Node 6: Recepción/Traslado y Bordado/Estampado por Confeccionista -->
-                    <div class="flex justify-center" data-phase="4">
-                        <div onclick="showDetails(6)" class="bpmn-node bg-white border border-teal-300 hover:border-teal-500 text-slate-800 p-2.5 rounded-lg shadow-sm text-center w-full" id="node-6">
-                            <div class="flex items-center justify-between text-[10px] text-teal-700 font-bold mb-1">
-                                <span><i class="fa-solid fa-stamp"></i> Bordado</span>
-                                <span>4.1</span>
-                            </div>
-                            <p class="text-[11px] font-semibold leading-tight text-slate-800">Bordado/Estampado (Confeccionista)</p>
-                            <p class="text-[9px] text-slate-500 mt-1">Lleva / recoge según muestra</p>
-                        </div>
-                    </div>
-
-                    <!-- Node 7: Confección de Prendas -->
-                    <div class="flex justify-center" data-phase="5">
-                        <div onclick="showDetails(7)" class="bpmn-node bg-white border border-teal-300 hover:border-teal-500 text-slate-800 p-2.5 rounded-lg shadow-sm text-center w-full" id="node-7">
-                            <div class="flex items-center justify-between text-[10px] text-teal-700 font-bold mb-1">
-                                <span><i class="fa-solid fa-scissors"></i> Costura</span>
-                                <span>5.1</span>
-                            </div>
-                            <p class="text-[11px] font-bold leading-tight text-slate-800">Confección según Ficha/Muestra</p>
-                        </div>
-                    </div>
-
-                    <div class="col-span-2"></div>
-                </div>
-            </div>
-
-            <!-- SWIMLANE 4: AUXILIAR DE TALLER PRINCIPAL (ATP) -->
-            <div class="swimlane grid grid-cols-[180px_1fr] min-h-[160px] bg-white hover:bg-slate-50 transition">
-                <div class="bg-emerald-950 text-emerald-100 p-3 flex flex-col justify-center items-center text-center border-r border-slate-300">
-                    <i class="fa-solid fa-boxes-packing text-2xl mb-1 text-emerald-300"></i>
-                    <span class="font-bold text-xs uppercase tracking-wide">Auxiliar Taller Principal</span>
-                    <span class="text-[9px] text-emerald-200 mt-0.5 leading-tight text-center">Personal de APOYO</span>
-                    <span class="text-[10px] bg-emerald-800 text-emerald-100 px-2 py-0.5 rounded-full mt-1 font-mono font-semibold">ATP</span>
-                </div>
-                <div class="p-3 grid grid-cols-7 gap-2 items-center relative">
-                    <div class="col-span-2"></div>
-
-                    <!-- Node 5: Tendido y Corte -->
-                    <div class="flex justify-center" data-phase="3">
-                        <div onclick="showDetails(5)" class="bpmn-node bg-white border border-emerald-300 hover:border-emerald-500 text-slate-800 p-2.5 rounded-lg shadow-sm text-center w-full" id="node-5">
-                            <div class="flex items-center justify-between text-[10px] text-emerald-700 font-bold mb-1">
-                                <span><i class="fa-solid fa-layer-group"></i> Planta</span>
-                                <span>3.1</span>
-                            </div>
-                            <p class="text-[11px] font-semibold leading-tight text-slate-800">Tendido, Corte y Rotulado</p>
-                            <p class="text-[9px] text-slate-500 mt-1">Según especificaciones GCT</p>
-                        </div>
-                    </div>
-
-                    <!-- Node 6b: Traslado Bordado por ATP -->
-                    <div class="flex justify-center" data-phase="4">
-                        <div onclick="showDetails(62)" class="bpmn-node bg-white border border-emerald-300 hover:border-emerald-500 text-slate-800 p-2.5 rounded-lg shadow-sm text-center w-full" id="node-62">
-                            <div class="flex items-center justify-between text-[10px] text-emerald-700 font-bold mb-1">
-                                <span><i class="fa-solid fa-van-shuttle"></i> Apoyo</span>
-                                <span>4.2</span>
-                            </div>
-                            <p class="text-[11px] font-semibold leading-tight text-slate-800">Bordado/Estampado (ATP)</p>
-                            <p class="text-[9px] text-slate-500 mt-1">Lleva y recoge muestras</p>
-                        </div>
-                    </div>
-
-                    <!-- Node 8: Auditoría QA In Situ -->
-                    <div class="flex justify-center" data-phase="5">
-                        <div onclick="showDetails(8)" class="bpmn-node bg-white border-2 border-amber-500 hover:border-amber-600 text-slate-800 p-2.5 rounded-lg shadow-md text-center w-full" id="node-8">
-                            <div class="flex items-center justify-between text-[10px] text-amber-700 font-bold mb-1">
-                                <span><i class="fa-solid fa-magnifying-glass"></i> QA Site</span>
-                                <span>5.2</span>
-                            </div>
-                            <p class="text-[11px] font-bold leading-tight text-amber-900">Auditoría de Calidad In Situ</p>
-                            <p class="text-[9px] text-amber-700 mt-1">Inspección en talleres</p>
-                        </div>
-                    </div>
-
-                    <!-- Node 9: Acopio, Empaque y Despacho -->
-                    <div class="flex justify-center" data-phase="6">
-                        <div onclick="showDetails(9)" class="bpmn-node bg-white border border-emerald-300 hover:border-emerald-500 text-slate-800 p-2.5 rounded-lg shadow-sm text-center w-full" id="node-9">
-                            <div class="flex items-center justify-between text-[10px] text-emerald-700 font-bold mb-1">
-                                <span><i class="fa-solid fa-box-open"></i> Empaque</span>
-                                <span>6.1</span>
-                            </div>
-                            <p class="text-[11px] font-semibold leading-tight text-slate-800">Acopio, Conteo, Empaque & Despacho</p>
-                        </div>
-                    </div>
-
-                    <!-- Node 10: Entrega y Guía Firmada -->
-                    <div class="flex justify-center" data-phase="7">
-                        <div onclick="showDetails(10)" class="bpmn-node bg-white border border-emerald-400 hover:border-emerald-600 text-slate-800 p-2.5 rounded-lg shadow-sm text-center w-full" id="node-10">
-                            <div class="flex items-center justify-between text-[10px] text-emerald-700 font-bold mb-1">
-                                <span><i class="fa-solid fa-signature"></i> Guía</span>
-                                <span>7.1</span>
-                            </div>
-                            <p class="text-[11px] font-semibold leading-tight text-slate-800">Entrega Cliente y Firma Guía</p>
-                            <p class="text-[9px] text-slate-500 mt-1">Entrega guía al GCT</p>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
+    <!-- TARJETA TO-BE -->
+    <div class="process-card card-tobe" onclick="openModal('proceso-to-be-confecciones.html', 'Proceso To-Be (Estado Optimizado)')">
+      <div class="card-header">
+        <div class="card-title-group">
+          <div class="card-icon">
+            <i class="fa-solid fa-chart-line"></i>
+          </div>
+          <h2>Proceso To-Be</h2>
         </div>
-    </main>
-
-    <!-- DETAILED NODE MODAL / DRAWER -->
-    <div id="detailModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 transform transition-all">
-            <!-- Modal Header -->
-            <div id="modalHeader" class="p-4 bg-slate-900 text-white flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                    <span id="modalCode" class="bg-blue-500/30 text-blue-300 text-xs px-2.5 py-0.5 rounded font-mono font-bold">1.1</span>
-                    <h3 id="modalTitle" class="font-bold text-base text-white">Título de la Actividad</h3>
-                </div>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-white transition p-1">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-
-            <!-- Modal Content -->
-            <div class="p-5 space-y-4 text-xs">
-                <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Rol Responsable</label>
-                    <p id="modalRole" class="font-semibold text-slate-800 text-sm bg-slate-100 p-2.5 rounded-lg border border-slate-200 flex items-center gap-2">
-                        <i class="fa-solid fa-user-tag text-blue-600"></i>
-                        <span>Gestor Comercial y Técnico (GCT)</span>
-                    </p>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Insumos / Entrada</label>
-                        <p id="modalInput" class="bg-blue-50/70 text-blue-900 p-2.5 rounded-lg border border-blue-100 min-h-[50px]">
-                            Solicitud del Cliente
-                        </p>
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Entregable / Salida</label>
-                        <p id="modalOutput" class="bg-emerald-50/70 text-emerald-900 p-2.5 rounded-lg border border-emerald-100 min-h-[50px]">
-                            Tizado y Cotización ERP
-                        </p>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Descripción de la Actividad</label>
-                    <p id="modalDesc" class="text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs">
-                        Detalle del procedimiento...
-                    </p>
-                </div>
-
-                <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 flex items-start space-x-2.5">
-                    <i class="fa-solid fa-lightbulb text-amber-600 text-base mt-0.5"></i>
-                    <div>
-                        <span class="font-bold block text-amber-950 text-xs">Punto Clave / Control de Calidad:</span>
-                        <span id="modalCritical" class="text-amber-900 text-xs">Efectuar tizado previo para garantizar la precisión de metros solicitados.</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal Footer -->
-            <div class="p-3 bg-slate-50 border-t border-slate-200 text-right">
-                <button onclick="closeModal()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-1.5 rounded-lg text-xs font-semibold">Cerrar</button>
-            </div>
+        <span class="badge badge-tobe">Propuesta / Optimizado</span>
+      </div>
+      <div class="iframe-preview-container">
+        <iframe src="proceso-to-be-confecciones.html" scrolling="no"></iframe>
+        <div class="overlay">
+          <span class="btn-expand">
+            <i class="fa-solid fa-magnifying-glass-plus"></i> Expandir Diagrama To-Be
+          </span>
         </div>
+      </div>
     </div>
+  </main>
 
-    <!-- EXPORT & BIZAGI INSTRUCTIONS MODAL -->
-    <div id="exportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden border border-slate-200">
-            <div class="p-4 bg-slate-900 text-white flex items-center justify-between">
-                <h3 class="font-bold text-base flex items-center gap-2">
-                    <i class="fa-solid fa-file-export text-blue-400"></i> Exportación & Diagramación (Bizagi / Draw.io)
-                </h3>
-                <button onclick="closeExportModal()" class="text-slate-400 hover:text-white p-1">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-
-            <div class="p-5 space-y-4 text-xs text-slate-700">
-                <p>Este flujo actualizado contempla los <strong>4 roles clave</strong> y las <strong>7 fases operativas</strong> hasta la facturación. Puedes importar este código en herramientas como Draw.io, Mermaid o Bizagi Modeler:</p>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h4 class="font-bold text-blue-900 mb-1">Estructura de Roles en Bizagi</h4>
-                        <ul class="list-disc pl-4 space-y-1 text-blue-800 text-[11px]">
-                            <li><strong>GCT:</strong> Gestor Comercial y Técnico</li>
-                            <li><strong>PROV:</strong> Proveedores de Tela</li>
-                            <li><strong>CONF:</strong> Confeccionistas (Jhon/Alcides)</li>
-                            <li><strong>ATP:</strong> Auxiliar Taller Principal</li>
-                        </ul>
-                    </div>
-
-                    <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                        <h4 class="font-bold text-emerald-900 mb-1">Puntos Críticos de Control</h4>
-                        <ul class="list-disc pl-4 space-y-1 text-emerald-800 text-[11px]">
-                            <li>Tizado inicial en Fase 1 para tela exacta.</li>
-                            <li>Pago previa validación de GCT y Gerencia.</li>
-                            <li>Auditoría QA In Situ en talleres (ATP).</li>
-                            <li>Facturación contra Guía Firmada.</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div>
-                    <div class="flex items-center justify-between mb-1">
-                        <label class="font-bold text-slate-800">Código Mermaid (Copia y pega en Draw.io o Notion):</label>
-                        <span id="copyNotification" class="text-[11px] text-emerald-600 font-bold hidden"><i class="fa-solid fa-check"></i> ¡Copiado!</span>
-                    </div>
-                    <textarea id="mermaidCode" readonly class="w-full h-32 p-2.5 font-mono text-[11px] bg-slate-900 text-slate-200 rounded-lg border border-slate-700 leading-normal">
-graph TD
-    subgraph F1_Cotizacion[Fase 1: Cotización]
-        A[GCT: 1.1 Recibe Cotización y Tizado] --> B[GCT: 1.2 Precios Unitarios y Cotización ERP]
-    end
-
-    subgraph F2_Compras[Fase 2: Compras]
-        B --> C[GCT: 2.1 Gestión Compra de Tela]
-        C --> D[PROV: 2.2 Despacho Tela a Talleres o Planta]
-    end
-
-    subgraph F3_Corte[Fase 3: Corte]
-        D --> E[ATP: 3.1 Tendido, Corte y Rotulado]
-    end
-
-    subgraph F4_Bordado[Fase 4: Bordado / Estampado]
-        E --> F1[CONF: 4.1 Bordado/Estampado Confeccionista]
-        E --> F2[ATP: 4.2 Bordado/Estampado ATP]
-    end
-
-    subgraph F5_Confeccion[Fase 5: Confección & QA]
-        F1 --> G[CONF: 5.1 Confección según Ficha/Muestra]
-        F2 --> G
-        G --> H[ATP: 5.2 Auditoría de Calidad In Situ]
-    end
-
-    subgraph F6_Despacho[Fase 6: Acopio & Despacho]
-        H --> I[ATP: 6.1 Acopio, Conteo, Empaque & Despacho]
-    end
-
-    subgraph F7_Facturacion[Fase 7: Guía & Facturación]
-        I --> J[ATP: 7.1 Entrega Cliente y Firma Guía]
-        J --> K[GCT: 7.2 Solicitar Facturación a Contabilidad]
-    end
-                    </textarea>
-                </div>
-            </div>
-
-            <div class="p-3 bg-slate-50 border-t border-slate-200 text-right flex justify-end gap-2">
-                <button onclick="copyMermaid()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5">
-                    <i class="fa-solid fa-copy"></i> Copiar Código
-                </button>
-                <button onclick="closeExportModal()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-1.5 rounded-lg text-xs font-semibold">Cerrar</button>
-            </div>
-        </div>
+  <!-- MODAL / VISTA EXPANDIDA -->
+  <div id="diagramModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle"><i class="fa-solid fa-sitemap text-sky-400"></i> Proceso</h2>
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <iframe id="modalFrame" src=""></iframe>
+      </div>
     </div>
+  </div>
 
-    <script>
-        // Updated Node Details Database according to current 4 roles & 7 phases logic
-        const nodesData = {
-            1: {
-                code: "1.1 - COTIZACIÓN",
-                title: "Recepción de Solicitud del cliente y Tizado Inicial",
-                role: "Gestor Comercial y Técnico (GCT)",
-                input: "Solicitud del cliente con especificaciones de prenda o muestra física.",
-                output: "Tizado preliminar con cálculo exacto del consumo de tela por unidad.",
-                desc: "El GCT recibe la solicitud del cliente y realiza el tizado para calcular de forma precisa el rendimiento y metraje de tela requerido antes de emitir precios.",
-                critical: "El tizado previo evita errores en el cálculo de costos de tela y pérdidas de margen."
-            },
-            2: {
-                code: "1.2 - ERP",
-                title: "Determinación de Precios y Cotización ERP",
-                role: "Gestor Comercial y Técnico (GCT)",
-                input: "Consumos de tela calculados en tizado + costos de insumos/confección.",
-                output: "Cotización oficial generada en el sistema ERP.",
-                desc: "Se establecen los precios unitarios definitivos para cada prenda y se registra la propuesta en el sistema ERP comercial de la empresa.",
-                critical: "Asegurar el registro completo de la Ficha Técnica y precios en el ERP."
-            },
-            3: {
-                code: "2.1 - COMPRAS",
-                title: "Contacto y Gestión de Compra de Tela",
-                role: "Gestor Comercial y Técnico (GCT)",
-                input: "Orden de Compra del cliente y metraje de tela aprobado previo tizado.",
-                output: "Orden de compra a proveedor por ERP",
-                desc: "El GCT contacta a NABILA / PERÚ PIMA para telas en gran volumen (bramante, drill). Para otras telas o toallas en menor cantidad, se compra en Gamarra (presencial o correo) coordinando la transferencia con Facturación y Gerencia.",
-                critical: "Todo pago por compra de tela por transferencia requiere la aprobación previa y formal de Gerencia"
-            },
-            4: {
-                code: "2.2 - DESPACHO",
-                title: "Despacho de Tela a Talleres de confección",
-                role: "Proveedores de Tela (Nabila / Perú Pima / Gamarra)",
-                input: "Orden de Compra / Pago confirmado por Facturación.",
-                output: "Rollos de tela entregados en taller de confección o Taller Principal.",
-                desc: "Los proveedores entregan los rollos de tela directamente en las instalaciones asignadas (talleres de Jhon / Alcides o Taller Principal).",
-                critical: "Verificar la guía de remisión del proveedor con los metros solicitados. Solicitar la factura correspondiente para el registro contable y control de inventario."
-            },
-            5: {
-                code: "3.1 - CORTE",
-                title: "Tendido, Corte y Rotulado de Piezas",
-                role: "Auxiliar de Taller Principal (ATP)",
-                input: "Tela recibida + Ficha técnica / Muestra física entregada por GCT.",
-                output: "Paquetes cortados, empaquetados por tipo de prenda y rotulados.",
-                desc: "Cuando se requiere avanzar confección en Taller Principal, el ATP realiza el tendido y corte de acuerdo a la muestra o ficha técnica, empaquetando y rotulando cada lote para evitar confusiones.",
-                critical: "Rotular rigurosamente cada paquete por cliente, talla y tipo de prenda para prevenir errores."
-            },
-            6: {
-                code: "4.1 - BORDADO (CONF)",
-                title: "Traslado y Bordado/Estampado por Confeccionista",
-                role: "Confeccionistas (Jhon / Alcides / Talleres Chorrillos)",
-                input: "Piezas cortadas + Muestra física o ficha técnica del diseño a bordar.",
-                output: "Piezas bordadas/estampadas recolectadas del taller especializado.",
-                desc: "El confeccionista traslada los cortes al taller de bordado/estampado junto con la ficha tecnica de diseño y luego los recoge listos para la costura.",
-                critical: "Verificar que el bordado coincida con la muestra antes de iniciar confección y verificar cantidades."
-            },
-            62: {
-                code: "4.2 - BORDADO (ATP)",
-                title: "Traslado y Bordado/Estampado por ATP",
-                role: "Auxiliar de Taller Principal (ATP)",
-                input: "Piezas cortadas en planta + Ficha técnica de bordado/estampado.",
-                output: "Piezas bordadas/estampadas recolectadas y listas para confección.",
-                desc: "El ATP traslada las piezas cortadas al taller de bordado con la muestra o ficha técnica del diseño a bordar o estampar.",
-                critical: "Verificar que el bordado coincida con la muestra antes de iniciar confección y verificar cantidades."
-            },
-            7: {
-                code: "5.1 - COSTURA",
-                title: "Confección de Prendas",
-                role: "Confeccionistas (Jhon / Alcides / Talleres Chorrillos)",
-                input: "Piezas cortadas y bordadas + Muestra física / Ficha técnica.",
-                output: "Prendas armadas y confeccionadas listas para inspección.",
-                desc: "Los talleres de confección ejecutan el armado de prendas rigurosamente acorde a las muestras físicas o fichas técnicas de especificación facilitadas por el GCT o ATP.",
-                critical: "Respetar las medidas y acabados estipulados en la muestra de referencia con la calidad requerida por el cliente."
-            },
-            8: {
-                code: "5.2 - AUDITORÍA QA",
-                title: "Auditoría de Calidad IN SITU en Talleres",
-                role: "Auxiliar de Taller Principal (ATP)",
-                input: "Prendas en proceso/terminadas en talleres de confección.",
-                output: "Reporte de conformidad o corrección in situ de prendas.",
-                desc: "El ATP acude in situ a los talleres de confección para auditar las prendas, corregir fallas de costura u hilos sobrantes y prevenir entregas de mala calidad.",
-                critical: "Identificar y corregir defectos antes de que el pedido salga del taller externo."
-            },
-            9: {
-                code: "6.1 - DESPACHO",
-                title: "Acopio, Conteo, Revision QA y Empaque",
-                role: "Auxiliar de Taller Principal (ATP)",
-                input: "Prendas confeccionadas de todos los talleres.",
-                output: "Bultos empacados, rotulados y agrupados según guía de entrega por cliente.",
-                desc: "El ATP concentra todas las prendas en el Taller Principal, efectúa el conteo final, revisión de calidad, empaquetado por cliente y rotulado para su despacho.",
-                critical: "Revisar conteo exacto al 100% contra la orden del cliente."
-            },
-            10: {
-                code: "7.1 - GUÍA",
-                title: "Entrega al Cliente y Firma de Guía",
-                role: "Auxiliar de Taller Principal (ATP)",
-                input: "Bultos empacados + Guías de Remisión de entrega.",
-                output: "Guías de remisión firmadas en conformidad por el cliente.",
-                desc: "El ATP entrega el pedido terminado al cliente, hace firmar las guías de entrega como sustento de conformidad y se las entrega de inmediato al GCT.",
-                critical: "Garantizar la firma y sello visible en la guía de entrega."
-            },
-            11: {
-                code: "7.2 - FACTURACIÓN",
-                title: "Solicitud de Facturación al Área Contable",
-                role: "Gestor Comercial y Técnico (GCT)",
-                input: "Guías de entrega firmadas recibidas del ATP.",
-                output: "Factura emitida al cliente.",
-                desc: "El GCT solicita la documentación correspondiente al área de contabilidad para generar la facturación final al cliente.",
-                critical: "No solicitar facturación sin el sustento de la guía de entrega firmada. Evitar omisión en la facturación por la entrega de algún pedido ya atendido."
-            }
-        };
+  <script>
+    function openModal(fileUrl, title) {
+      document.getElementById('modalTitle').innerHTML = `<i class="fa-solid fa-sitemap text-sky-400"></i> ${title}`;
+      document.getElementById('modalFrame').src = fileUrl;
+      document.getElementById('diagramModal').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
 
-        // Modal Controls
-        function showDetails(nodeId) {
-            const data = nodesData[nodeId];
-            if (!data) return;
+    function closeModal() {
+      document.getElementById('diagramModal').style.display = 'none';
+      document.getElementById('modalFrame').src = '';
+      document.body.style.overflow = 'auto';
+    }
 
-            document.getElementById('modalCode').innerText = data.code;
-            document.getElementById('modalTitle').innerText = data.title;
-            document.getElementById('modalRole').innerHTML = `<i class="fa-solid fa-user-check text-blue-600"></i> ${data.role}`;
-            document.getElementById('modalInput').innerText = data.input;
-            document.getElementById('modalOutput').innerText = data.output;
-            document.getElementById('modalDesc').innerText = data.desc;
-            document.getElementById('modalCritical').innerText = data.critical;
-
-            document.getElementById('detailModal').classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('detailModal').classList.add('hidden');
-        }
-
-        function openExportModal() {
-            document.getElementById('exportModal').classList.remove('hidden');
-        }
-
-        function closeExportModal() {
-            document.getElementById('exportModal').classList.add('hidden');
-        }
-
-        function copyMermaid() {
-            const text = document.getElementById('mermaidCode').value;
-            navigator.clipboard.writeText(text);
-            
-            const notify = document.getElementById('copyNotification');
-            notify.classList.remove('hidden');
-            setTimeout(() => {
-                notify.classList.add('hidden');
-            }, 2500);
-        }
-
-        // Phase Filter functionality
-        function filterByPhase(phase) {
-            const allNodes = document.querySelectorAll('[data-phase]');
-            allNodes.forEach(node => {
-                if (phase === 'ALL' || node.getAttribute('data-phase') === phase) {
-                    node.style.opacity = '1';
-                    node.style.filter = 'none';
-                    node.style.pointerEvents = 'auto';
-                } else {
-                    node.style.opacity = '0.2';
-                    node.style.filter = 'grayscale(100%)';
-                    node.style.pointerEvents = 'none';
-                }
-            });
-        }
-
-        // Interactive Step-by-step Order Simulation
-        let simInterval = null;
-        const simulationSequence = [1, 2, 3, 4, 5, 6, 62, 7, 8, 9, 10, 11];
-
-        function startSimulation() {
-            resetSimulation();
-            let index = 0;
-
-            simInterval = setInterval(() => {
-                if (index >= simulationSequence.length) {
-                    clearInterval(simInterval);
-                    return;
-                }
-                const nodeId = simulationSequence[index];
-                highlightNode(nodeId);
-                index++;
-            }, 1300);
-        }
-
-        function highlightNode(nodeId) {
-            document.querySelectorAll('.bpmn-node').forEach(el => {
-                el.classList.remove('active-step', 'bg-blue-100');
-            });
-
-            const current = document.getElementById(`node-${nodeId}`);
-            if (current) {
-                current.classList.add('active-step', 'bg-blue-100');
-                current.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-            }
-        }
-
-        function resetSimulation() {
-            if (simInterval) clearInterval(simInterval);
-            document.querySelectorAll('.bpmn-node').forEach(el => {
-                el.classList.remove('active-step', 'bg-blue-100');
-            });
-            filterByPhase('ALL');
-            document.getElementById('phaseFilter').value = 'ALL';
-        }
-    </script>
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+    });
+  </script>
 </body>
 </html>

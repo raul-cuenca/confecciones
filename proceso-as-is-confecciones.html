@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MONCAL Confecciones - Diagrama BPMN 2.0 AS-IS Optimizado</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Custom scrollbar styles */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #090d16; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+        .canvas-container {
+            cursor: grab;
+            user-select: none;
+        }
+        .canvas-container:active {
+            cursor: grabbing;
+        }
+
+        /* Node Hover and Selection Effects */
+        .bpmn-card {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .bpmn-card:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 10px 25px -5px rgba(56, 189, 248, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+        }
+        .bpmn-card.active-node {
+            ring: 3px;
+            box-shadow: 0 0 20px 2px rgba(56, 189, 248, 0.7);
+        }
+
+        .gateway-node {
+            transition: all 0.25s ease;
+        }
+        .gateway-node:hover {
+            filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.8));
+            cursor: pointer;
+        }
+
+        /* Pulsing Bottleneck / Risk Warning */
+        .bottleneck-pulse {
+            animation: pulse-border 2s infinite;
+        }
+        @keyframes pulse-border {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); border-color: #ef4444; }
+            50% { box-shadow: 0 0 18px 4px rgba(239, 68, 68, 0.8); border-color: #f87171; }
+        }
+
+        /* Flow connection line animation */
+        .active-flow {
+            stroke-dasharray: 8;
+            animation: dash 0.8s linear infinite;
+        }
+        @keyframes dash {
+            to { stroke-dashoffset: -16; }
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col overflow-hidden bg-slate-950 text-slate-100">
+
+    <header class="bg-slate-900 border-b border-slate-800 px-5 py-3 flex flex-wrap items-center justify-between gap-4 z-20 shadow-xl">
+        <div class="flex items-center space-x-3">
+            <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-2.5 rounded-xl border border-blue-400/30 text-white shadow-lg shadow-blue-900/30">
+                <i class="fa-solid fa-sitemap text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-extrabold tracking-tight text-white flex items-center gap-2">
+                    MONCAL Confecciones 
+                    <span class="bg-amber-500/20 text-amber-300 text-xs font-bold px-2.5 py-0.5 rounded-full border border-amber-500/40 tracking-wide uppercase">
+                        Proceso AS-IS (Legible BPMN 2.0)
+                    </span>
+                </h1>
+                <p class="text-xs text-slate-400">Diagrama de flujo interactivo con tarjetas explicativas y compuertas de decisión claras</p>
+            </div>
+        </div>
+
+        <!-- Simulation Player Controls -->
+        <div class="flex items-center space-x-2 bg-slate-950/80 p-1.5 rounded-xl border border-slate-800 shadow-inner">
+            <button id="btnPrev" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-backward-step text-slate-400"></i> Anterior
+            </button>
+            <button id="btnPlay" class="px-4 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center gap-2 shadow-md shadow-emerald-900/40">
+                <i class="fa-solid fa-play text-xs" id="playIcon"></i> <span id="playText">Simular Paso a Paso</span>
+            </button>
+            <button id="btnNext" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5">
+                Siguiente <i class="fa-solid fa-forward-step text-slate-400"></i>
+            </button>
+            <div class="h-4 w-px bg-slate-800 mx-1"></div>
+            <span class="text-xs font-mono text-cyan-400 px-3 py-1 bg-cyan-950/60 rounded-md border border-cyan-800/50 font-bold" id="stepCounter">Paso: 0 / 30</span>
+        </div>
+
+        <!-- View Controls & Filters -->
+        <div class="flex items-center space-x-2">
+            <button id="btnHeatmap" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-2">
+                <i class="fa-solid fa-fire text-amber-400"></i> Heatmap Riesgos
+            </button>
+            <div class="flex bg-slate-800/90 p-1 rounded-xl border border-slate-700/80">
+                <button id="btnZoomIn" class="p-1.5 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition" title="Acercar (+)">
+                    <i class="fa-solid fa-magnifying-glass-plus text-sm"></i>
+                </button>
+                <button id="btnZoomOut" class="p-1.5 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition" title="Alejar (-)">
+                    <i class="fa-solid fa-magnifying-glass-minus text-sm"></i>
+                </button>
+                <button id="btnReset" class="p-1.5 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition" title="Restablecer Vista">
+                    <i class="fa-solid fa-compress text-sm"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden relative">
+        
+        <!-- Interactive Canvas Viewport -->
+        <main class="flex-1 relative bg-slate-950 overflow-hidden canvas-container" id="canvasViewport">
+            <!-- Grid Background Pattern -->
+            <div class="absolute inset-0 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:28px_28px] pointer-events-none opacity-40"></div>
+            
+            <!-- SVG Interactive Canvas Engine -->
+            <svg id="bpmnCanvas" class="w-full h-full absolute inset-0 cursor-grab active:cursor-grabbing">
+                <g id="canvasTransformGroup">
+                    <!-- Swimlanes Layer -->
+                    <g id="swimlanesGroup"></g>
+                    <!-- Connections Layer (Paths & Arrows) -->
+                    <g id="connectionsGroup"></g>
+                    <!-- BPMN Nodes Layer (Activity Cards & Gateways) -->
+                    <g id="nodesGroup"></g>
+                    <!-- Decision Labels Layer (Rendered on top to prevent overlap) -->
+                    <g id="labelsGroup"></g>
+                </g>
+            </svg>
+
+            <!-- Floating Legend Overlay -->
+            <div class="absolute bottom-5 left-5 bg-slate-900/95 backdrop-blur border border-slate-800 p-3.5 rounded-2xl shadow-2xl z-10 text-xs text-slate-300 space-y-2 pointer-events-auto max-w-xs border-slate-700/60">
+                <div class="font-bold text-white mb-1 border-b border-slate-800 pb-1.5 flex items-center justify-between">
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-layer-group text-blue-400"></i> Simbología BPMN 2.0</span>
+                    <span class="text-[10px] text-slate-500 font-mono">AS-IS</span>
+                </div>
+                <div class="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 border border-emerald-300 shrink-0"></span>
+                        <span>Inicio / Fin</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3.5 h-3 rounded bg-blue-600 border border-blue-400 shrink-0"></span>
+                        <span>Tarea del Taller</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3.5 h-3.5 rotate-45 bg-amber-500 border border-amber-300 shrink-0"></span>
+                        <span>Compuerta (XOR)</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3.5 h-3 rounded bg-red-600/40 border border-red-500 shrink-0"></span>
+                        <span>Riesgo / Bottleneck</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Side Inspector Panel -->
+        <aside class="w-96 bg-slate-900 border-l border-slate-800 flex flex-col z-10 shadow-2xl transition-all duration-300" id="inspectorPanel">
+            <!-- Sidebar Header -->
+            <div class="p-4 border-b border-slate-800 bg-slate-900/90 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-circle-info text-blue-400 text-base"></i>
+                    <h2 class="font-bold text-slate-100 text-sm">Detalle de la Actividad</h2>
+                </div>
+                <span class="text-xs bg-slate-800 text-cyan-400 border border-slate-700 px-2.5 py-0.5 rounded-full font-mono font-bold" id="nodeIdBadge">PASO-00</span>
+            </div>
+
+            <!-- Scrollable Content Body -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-4 text-xs" id="nodeDetailsContent">
+                <div class="text-center text-slate-500 py-16 px-4">
+                    <i class="fa-solid fa-arrow-pointer text-4xl mb-3 text-slate-700 animate-bounce"></i>
+                    <p class="text-slate-400 font-medium text-sm mb-1">Explora el Diagrama</p>
+                    <p class="text-xs text-slate-500">Haz clic en cualquier tarjeta o condicional del mapa, o haz clic en <b>Simular Paso a Paso</b> para iniciar el recorrido.</p>
+                </div>
+            </div>
+
+            <!-- Quick Operational Diagnostic Widget -->
+            <div class="p-4 bg-slate-950 border-t border-slate-800 space-y-2.5">
+                <div class="text-xs font-bold text-amber-400 flex items-center justify-between">
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation"></i> Diagnóstico Operativo Moncal</span>
+                    <span class="text-[10px] text-slate-400 font-mono">AS-IS</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-[11px]">
+                    <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
+                        <span class="block text-slate-400 text-[10px] uppercase font-semibold">Carga del Encargado:</span>
+                        <span class="font-extrabold text-red-400 text-xs">25 / 30 nodos (83.3%)</span>
+                    </div>
+                    <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
+                        <span class="block text-slate-400 text-[10px] uppercase font-semibold">Desplazamientos:</span>
+                        <span class="font-extrabold text-amber-400 text-xs">Chorrillos, Gamarra, Clínica</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // Process Dataset Mapped from MONCAL AS-IS 27 Steps
+        const processData = {
+            swimlanes: [
+                { id: "CLIENTE", name: "CLIENTE (Clínicas / Restaurantes)", color: "rgba(15, 23, 42, 0.6)", y: 20, h: 150 },
+                { id: "ENCARGADO", name: "Encargado del taller de confecciones (Sobrecargado)", color: "rgba(30, 58, 138, 0.2)", y: 180, h: 320 },
+                { id: "GERENCIA", name: "GERENCIA GENERAL", color: "rgba(88, 28, 135, 0.2)", y: 510, h: 140 },
+                { id: "TALLERES", name: "PROVEEDORES Y TALLERES EXTERNOS", color: "rgba(120, 53, 15, 0.2)", y: 660, h: 200 },
+                { id: "LOGISTICA_CONT", name: "MOVILIDAD & CONTABILIDAD", color: "rgba(20, 83, 45, 0.2)", y: 880, h: 150 }
+            ],
+            nodes: [
+                {
+                    id: 1,
+                    code: "PASO-01",
+                    swimlane: "CLIENTE",
+                    type: "start",
+                    title: "Solicitud de Cotización",
+                    desc: "El cliente (nuevo o recurrente) solicita cotización por prendas listadas.",
+                    x: 320, y: 95,
+                    risk: false,
+                    details: "Clientes corporativos (Clínicas y Restaurantes en Lima / Cusco)."
+                },
+                {
+                    id: 2,
+                    code: "PASO-02",
+                    swimlane: "Encargado de Taller",
+                    type: "task",
+                    title: "Solicitar Specs / Muestra",
+                    desc: "El Encargado del taller de confecciones solicita las especificaciones técnicas o muestra física del pedido al cliente.",
+                    x: 640, y: 250,
+                    risk: true,
+                    details: "El Encargado del taller de confecciones actúa como diseñador técnico y patronista sin asistencia técnica dedicada."
+                },
+                {
+                    id: 3,
+                    code: "PASO-03",
+                    swimlane: "Encargado de Taller",
+                    type: "task",
+                    title: "Toma de Medidas y Specs",
+                    desc: "El Encargado del taller de confecciones toma medidas, analiza características de tela, costuras, logos y detalles para prendas nuevas.",
+                    x: 960, y: 250,
+                    risk: true,
+                    details: "Proceso manual sin ficha técnica previa formalizada."
+                },
+                {
+                    id: 4,
+                    code: "PASO-04",
+                    swimlane: "Encargado de Taller",
+                    type: "task",
+                    title: "Recuperar Fichas Guardadas",
+                    desc: "Si el cliente solicita prendas trabajadas previamente, el Encargado del taller de confecciones reúne muestras o fichas guardadas.",
+                    x: 960, y: 400,
+                    risk: false,
+                    details: "Búsqueda en archivo físico/digital propio de Moncal."
+                },
+                {
+                    id: 5,
+                    code: "PASO-05",
+                    swimlane: "Encargado de Taller",
+                    type: "task",
+                    title: "Realizar Tizado & Costeo",
+                    desc: "El Encargado del taller de confecciones realiza el tizado para calcular consumo de tela y costos de producción por prenda.",
+                    x: 1280, y: 250,
+                    risk: true,
+                    details: "Cuello de botella técnico. Asume rol de patronista y costeador."
+                },
+                {
+                    id: 6,
+                    code: "PASO-06",
+                    swimlane: "Encargado de Taller",
+                    type: "task",
+                    title: "Generar Cotización ERP",
+                    desc: "Genera la cotización sistematizada en el ERP de la empresa y la envía al cliente.",
+                    x: 1600, y: 250,
+                    risk: false,
+                    details: "Registro en sistema ERP MONCAL."
+                },
+                {
+                    id: 7,
+                    code: "PASO-07",
+                    swimlane: "CLIENTE",
+                    type: "gateway",
+                    title: "¿Evaluación Cotización?",
+                    desc: "El cliente evalúa los precios. ¿Acepta la propuesta comercial o solicita reajuste?",
+                    x: 1920, y: 95,
+                    risk: false,
+                    details: "Decisión del cliente."
+                },
+                {
+                    id: 8,
+                    code: "PASO-08",
+                    swimlane: "Encargado de Taller",
+                    type: "task",
+                    title: "Ajustar Precios",
+                    desc: "Si el cliente requiere rebaja, el Encargado del taller de confecciones reevalúa costos y propone ajuste.",
+                    x: 1920, y: 250,
+                    risk: false,
+                    details: "Requiere escalamiento a Gerencia General."
+                },
+                {
+                    id: 9,
+                    code: "PASO-09",
+                    swimlane: "GERENCIA",
+                    type: "task",
+                    title: "Aprobación de Gerencia",
+                    desc: "El Gerente de MONCAL revisa y aprueba o rechaza el ajuste de precios.",
+                    x: 1920, y: 580,
+                    risk: false,
+                    details: "Verificación del margen mínimo de ganancia."
+                },
+                {
+                    id: 10,
+                    code: "PASO-10",
+                    swimlane: "Encargado de Taller",
+                    type: "task",
+                    title: "Emitir Nueva Cotización",
+                    desc: "El Encargado del taller de confecciones genera una nueva cotización ajustada en ERP y la reenvía al cliente.",
+                    x: 2240, y: 250,
+                    risk: false,
+                    details: "Actualización de cotización en sistema."
+                },
+                {
+                    id: 11,
+                    code: "PASO-11",
+                    swimlane: "CLIENTE",
+                    type: "task",
+                    title: "Generar Orden de Compra",
+                    desc: "El cliente emite la Orden de Compra (OC) como aceptación formal.",
+                    x: 2560, y: 95,
+                    risk: false,
+                    details: "Hito clave para el inicio de compras de producción."
+                },
+                {
+                    id: 12,
+                    code: "PASO-12",
+                    swimlane: "Encargado de Taller",
+                    type: "task",
+                    title: "Pedir Tela a Proveedores",
+                    desc: "El Encargado del taller de confecciones contacta a los proveedores de tela según el cálculo del tizado.",
+                    x: 2560, y: 250,
+                    risk: true,
+                    details: "Gestión directa de compras asumida por el Encargado del taller."
+                },
+                {
+                    id: 13,
+                    code: "PASO-13",
+                    swimlane: "TALLERES",
+                    type: "gateway",
+                    title: "¿Modalidad Compra Tela?",
+                    desc: "¿Compra por Volumen (Nabila/Perú Pima) o Compra Presencial en Gamarra por el Encargado?",
+                    x: 2880, y: 760,
+                    risk: true,
+                    details: "Determina si el envío es directo o requiere traslado manual por el Encargado del taller de confecciones."
+                },
+                {
+                    id: 14,
+                    code: "PASO-14",
+                    swimlane: "TALLERES",
+                    type: "task",
+                    title: "Despacho Directo a Taller",
+                    desc: "Nabila / Perú Pima despachan la tela directo a Taller Jicamarca o Gamarra.",
+                    x: 3200, y: 760,
+                    risk: false,
+                    details: "Envío directo del proveedor al taller externo."
+                },
+                {
+                    id: 15,
+                    code: "PASO-15",
+                    swimlane: "Encargado de Taller",
+                    type: "task",
+                    title: "Compra Presencial Gamarra",
+                    desc: "El Encargado del taller de confecciones acude a Gamarra, compra y traslada personalmente la tela a Chorrillos.",
+                    x: 2880, y: 250,
+                    risk: true,
+                    details: "Pérdida significativa de tiempo operativo y esfuerzo físico."
+                },
+                {
+                    id: 16,
+                    code: "PASO-16",
+                    swimlane: "Encargado de Taller",
+                    type: "task",
+                    title: "Almacenar y Derivar Tela",
+                    desc: "Se almacena en Chorrillos y luego el Encargado del taller de confecciones traslada la tela a los talleres.",
+                    x: 3200, y: 250,
+                    risk: true,
+                    details: "Doble flete / manejo ineficiente de materiales."
+                },
+                {
+                    id: 17,
+                    code: "PASO-17",
+                    swimlane: "Encargado de Taller",
+                    type: "task",
+                    title: "Entregar Muestras a Taller",
+                    desc: "El Encargado del taller de confecciones entrega muestras físicas, medidas y cantidades a los confeccionistas.",
+                    x: 3520, y: 250,
+                    risk: false,
+                    details: "Entrega de órdenes de trabajo en talleres."
+                },
+                {
+                    id: 18,
+                    code: "PASO-18",
+                    swimlane: "TALLERES",
+                    type: "gateway",
+                    title: "¿Requiere Bordado o Estampado?",
+                    desc: "¿Las prendas confeccionadas requieren servicio adicional de acabado externo?",
+                    x: 3840, y: 760,
+                    risk: false,
+                    details: "Compuerta de decisión para derivar las prendas a talleres externos proveedores de servicios y acabados."
+                },
+                {
+                    id: 19,
+                    code: "PASO-19",
+                    swimlane: "TALLERES",
+                    type: "task",
+                    title: "Servicio Bordado (Gamarra)",
+                    desc: "Traslado de prendas y ejecución del bordado en taller externo especializado de Gamarra.",
+                    x: 4160, y: 700,
+                    risk: true,
+                    details: "Proveedor externo de servicios y acabados. Genera ruta adicional hacia Gamarra."
+                },
+                {
+                    id: 20,
+                    code: "PASO-20",
+                    swimlane: "TALLERES",
+                    type: "task",
+                    title: "Servicio Estampado (Taller Ext.)",
+                    desc: "Traslado de prendas y ejecución del estampado en taller externo especializado.",
+                    x: 4160, y: 820,
+                    risk: true,
+                    details: "Proveedor externo de servicios y acabados. Requiere coordinación de tiempos y traslado."
+                },
+                {
+                    id: 21,
+                    code: "PASO-21",
+                    swimlane: "Encargado de Taller",
+                    type: "task",
+                    title: "Traslado a Taller Chorrillos",
+                    desc: "Traslado de prendas (con bordado, estampado o sin acabado) al taller principal de Chorrillos.",
+                    x: 4480, y: 250,
+                    risk: true,
+                    details: "El Encargado del taller de confecciones o movilidad lleva el lote al taller central de Chorrillos para el control de calidad final."
+                },
+                {
+                    id: 22,
+                    code: "PASO-22",
+                    swimlane: "Encargado de Taller",
+                    type: "task",
+                    title: "Control Calidad & Desmanche",
+                    desc: "Revisión de prendas, corte de hilos (limpieza), desmanche y conteo final.",
+                    x: 4800, y: 250,
+                    risk: true,
+                    details: "Control de calidad tardío en etapa final en Chorrillos."
+                },
+                {
+                    id: 23,
+                    code: "PASO-23",
+                    swimlane: "Encargado de Taller",
+                    type: "task",
+                    title: "Doblado y Empaquetado",
+                    desc: "Acondicionamiento final, doblado y embolsado de prendas.",
+                    x: 5120, y: 250,
+                    risk: false,
+                    details: "Preparación de paquetes de despacho."
+                },
+                {
+                    id: 24,
+                    code: "PASO-24",
+                    swimlane: "Encargado de Taller",
+                    type: "gateway",
+                    title: "¿Destino del Pedido?",
+                    desc: "¿El pedido se despacha a la Clínica Japonesa o a Otros Clientes (Lima / Provincia)?",
+                    x: 5440, y: 250,
+                    risk: false,
+                    details: "Determina el responsable de la entrega según el tipo de cliente."
+                },
+                {
+                    id: 25,
+                    code: "PASO-25A",
+                    swimlane: "Encargado de Taller",
+                    type: "task",
+                    title: "Despacho Personal a Clínica",
+                    desc: "El Encargado del taller de confecciones realiza el despacho directo y entrega presencial en la Clínica Japonesa.",
+                    x: 5760, y: 250,
+                    risk: true,
+                    details: "El Encargado asume el traslado físico directo de la entrega."
+                },
+                {
+                    id: 26,
+                    code: "PASO-25B",
+                    swimlane: "LOGISTICA_CONT",
+                    type: "task",
+                    title: "Despacho vía Movilidad Moncal",
+                    desc: "La Movilidad de Moncal realiza la entrega del pedido en Lima o envío por agencia a Provincia.",
+                    x: 5760, y: 955,
+                    risk: false,
+                    details: "Despacho asignado al chofer/movilidad corporativa de la empresa."
+                },
+                {
+                    id: 27,
+                    code: "PASO-26",
+                    swimlane: "Encargado de Taller",
+                    type: "task",
+                    title: "Confirmar Entrega vía Correo",
+                    desc: "El Encargado del taller de confecciones confirma la entrega efectuada al cliente mediante correo electrónico con la guía firmada.",
+                    x: 6080, y: 250,
+                    risk: false,
+                    details: "Confirmación operativa formal de entrega recibida."
+                },
+                {
+                    id: 28,
+                    code: "PASO-27",
+                    swimlane: "Encargado of Taller",
+                    type: "task",
+                    title: "Solicitar Facturación a Contabilidad",
+                    desc: "El Encargado del taller solicita por correo al área de Contabilidad la emisión de la factura adjuntando los sustentos.",
+                    x: 6400, y: 250,
+                    risk: false,
+                    details: "Envío de guía firmada y sustentación del pedido completado."
+                },
+                {
+                    id: 29,
+                    code: "PASO-28",
+                    swimlane: "LOGISTICA_CONT",
+                    type: "task",
+                    title: "Enviar Facturación al Cliente",
+                    desc: "El área de Contabilidad genera y envía la factura electrónica formal por correo al cliente.",
+                    x: 6720, y: 955,
+                    risk: false,
+                    details: "Gestión contable y envío formal del comprobante electrónico de pago."
+                },
+                {
+                    id: 30,
+                    code: "PASO-29",
+                    swimlane: "Encargado de Taller",
+                    type: "end",
+                    title: "Archivar Expediente Físico y Digital",
+                    desc: "El Encargado del taller archiva los documentos en físico y digital (Orden de compra, Guía de entrega, Guía de remisión sistematizada y Factura).",
+                    x: 7040, y: 250,
+                    risk: false,
+                    details: "Cierre formal del expediente administrativo y operativo en MONCAL."
+                }
+            ],
+            connections: [
+                { from: 1, to: 2 },
+                { from: 2, to: 3, label: "Prenda Nueva" },
+                { from: 2, to: 4, label: "Prenda Recurrente" },
+                { from: 3, to: 5 },
+                { from: 4, to: 5 },
+                { from: 5, to: 6 },
+                { from: 6, to: 7 },
+                { from: 7, to: 11, label: "SÍ (Acepta OC)" },
+                { from: 7, to: 8, label: "Solicita Ajuste" },
+                { from: 8, to: 9 },
+                { from: 9, to: 10 },
+                { from: 10, to: 7, label: "Reenvía Oferta" },
+                { from: 11, to: 12 },
+                { from: 12, to: 13 },
+                { from: 13, to: 14, label: "Gran Volumen (Directo)" },
+                { from: 13, to: 15, label: "Presencial Gamarra" },
+                { from: 15, to: 16 },
+                { from: 16, to: 17 },
+                { from: 14, to: 17 },
+                { from: 17, to: 18 },
+                { from: 18, to: 19, label: "Requiere Bordado" },
+                { from: 18, to: 20, label: "Requiere Estampado" },
+                { from: 18, to: 21, label: "Sin Acabado Especial" },
+                { from: 19, to: 21 },
+                { from: 20, to: 21 },
+                { from: 21, to: 22 },
+                { from: 22, to: 23 },
+                { from: 23, to: 24 },
+                { from: 24, to: 25, label: "Clínica Japonesa" },
+                { from: 24, to: 26, label: "Otros Clientes" },
+                { from: 25, to: 27 },
+                { from: 26, to: 27 },
+                { from: 27, to: 28 },
+                { from: 28, to: 29 },
+                { from: 29, to: 30 }
+            ]
+        };
+
+        // DOM Elements
+        const viewport = document.getElementById('canvasViewport');
+        const transformGroup = document.getElementById('canvasTransformGroup');
+        const swimlanesGroup = document.getElementById('swimlanesGroup');
+        const connectionsGroup = document.getElementById('connectionsGroup');
+        const nodesGroup = document.getElementById('nodesGroup');
+        const labelsGroup = document.getElementById('labelsGroup');
+
+        // State Variables
+        let panX = 30;
+        let panY = 20;
+        let scale = 0.75;
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+        let currentStepIndex = -1;
+        let isPlaying = false;
+        let playInterval = null;
+        let isHeatmapActive = false;
+
+        function updateTransform() {
+            if (transformGroup) {
+                transformGroup.setAttribute("transform", `translate(${panX}, ${panY}) scale(${scale})`);
+            }
+        }
+
+        const canvasSvg = document.getElementById('bpmnCanvas');
+
+        document.getElementById('btnZoomIn').onclick = () => {
+            scale = Math.min(scale * 1.25, 2.5);
+            updateTransform();
+        };
+
+        document.getElementById('btnZoomOut').onclick = () => {
+            scale = Math.max(scale / 1.25, 0.2);
+            updateTransform();
+        };
+
+        document.getElementById('btnReset').onclick = () => {
+            scale = 0.75;
+            panX = 30;
+            panY = 20;
+            updateTransform();
+        };
+
+        // Canvas Pan / Drag Handlers
+        if (canvasSvg) {
+            canvasSvg.addEventListener('mousedown', (e) => {
+                if (e.target.closest('.bpmn-card') || e.target.closest('.gateway-node')) return;
+                isDragging = true;
+                startX = e.clientX - panX;
+                startY = e.clientY - panY;
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                panX = e.clientX - startX;
+                panY = e.clientY - startY;
+                updateTransform();
+            });
+
+            window.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            canvasSvg.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+                const newScale = Math.min(Math.max(scale * zoomFactor, 0.2), 2.5);
+                const rect = viewport.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+
+                panX = mouseX - (mouseX - panX) * (newScale / scale);
+                panY = mouseY - (mouseY - panY) * (newScale / scale);
+                scale = newScale;
+                updateTransform();
+            }, { passive: false });
+
+            let touchStartX = 0;
+            let touchStartY = 0;
+
+            canvasSvg.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    isDragging = true;
+                    touchStartX = e.touches[0].clientX - panX;
+                    touchStartY = e.touches[0].clientY - panY;
+                }
+            }, { passive: true });
+
+            canvasSvg.addEventListener('touchmove', (e) => {
+                if (isDragging && e.touches.length === 1) {
+                    panX = e.touches[0].clientX - touchStartX;
+                    panY = e.touches[0].clientY - touchStartY;
+                    updateTransform();
+                }
+            }, { passive: true });
+
+            canvasSvg.addEventListener('touchend', () => {
+                isDragging = false;
+            });
+        }
+
+        function renderSwimlanes() {
+            swimlanesGroup.innerHTML = '';
+            const totalWidth = 7400;
+
+            processData.swimlanes.forEach((lane) => {
+                // Swimlane Outer Container
+                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect.setAttribute("x", 0);
+                rect.setAttribute("y", lane.y);
+                rect.setAttribute("width", totalWidth);
+                rect.setAttribute("height", lane.h);
+                rect.setAttribute("fill", lane.color);
+                rect.setAttribute("stroke", "#1e293b");
+                rect.setAttribute("stroke-width", "1.5");
+                swimlanesGroup.appendChild(rect);
+
+                // Swimlane Header Sidebar
+                const headerBox = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                headerBox.setAttribute("x", 0);
+                headerBox.setAttribute("y", lane.y);
+                headerBox.setAttribute("width", 250);
+                headerBox.setAttribute("height", lane.h);
+                headerBox.setAttribute("fill", "#0f172a");
+                headerBox.setAttribute("stroke", "#334155");
+                headerBox.setAttribute("stroke-width", "1.5");
+                swimlanesGroup.appendChild(headerBox);
+
+                // Swimlane Title Label
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", 16);
+                text.setAttribute("y", lane.y + (lane.h / 2) + 4);
+                text.setAttribute("fill", "#94a3b8");
+                text.setAttribute("font-size", "12");
+                text.setAttribute("font-weight", "800");
+                text.setAttribute("letter-spacing", "0.5");
+                text.textContent = lane.name;
+                swimlanesGroup.appendChild(text);
+            });
+        }
+
+        function getSmartAnchors(source, target) {
+            const cardW = 210, cardH = 110;
+            const gwSize = 36;
+            const circleR = 26;
+
+            const getOffset = (node, dir) => {
+                if (node.type === 'gateway') return gwSize;
+                if (node.type === 'start' || node.type === 'end') return circleR;
+                return dir === 'x' ? cardW / 2 : cardH / 2;
+            };
+
+            const srcXOff = getOffset(source, 'x');
+            const srcYOff = getOffset(source, 'y');
+            const tgtXOff = getOffset(target, 'x');
+            const tgtYOff = getOffset(target, 'y');
+
+            const dx = target.x - source.x;
+            const dy = target.y - source.y;
+
+            let startX, startY, endX, endY;
+
+            // Determine primary direction
+            if (Math.abs(dx) >= Math.abs(dy)) {
+                if (dx >= 0) {
+                    // Target is to the right
+                    startX = source.x + srcXOff; startY = source.y;
+                    endX = target.x - tgtXOff; endY = target.y;
+                } else {
+                    // Loopback to the left
+                    startX = source.x; startY = source.y - srcYOff;
+                    endX = target.x + tgtXOff; endY = target.y;
+                }
+            } else {
+                if (dy >= 0) {
+                    // Target is below
+                    startX = source.x; startY = source.y + srcYOff;
+                    endX = target.x; endY = target.y - tgtYOff;
+                } else {
+                    // Target is above
+                    startX = source.x; startY = source.y - srcYOff;
+                    endX = target.x; endY = target.y + tgtYOff;
+                }
+            }
+
+            return { startX, startY, endX, endY, dx, dy };
+        }
+
+        function renderConnections() {
+            connectionsGroup.innerHTML = '';
+            labelsGroup.innerHTML = '';
+
+            // Marker Arrow Definitions
+            const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+            defs.innerHTML = `
+                <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b" />
+                </marker>
+                <marker id="arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#38bdf8" />
+                </marker>
+            `;
+            connectionsGroup.appendChild(defs);
+
+            processData.connections.forEach(conn => {
+                const source = processData.nodes.find(n => n.id === conn.from);
+                const target = processData.nodes.find(n => n.id === conn.to);
+
+                if (!source || !target) return;
+
+                const { startX, startY, endX, endY, dx, dy } = getSmartAnchors(source, target);
+
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                let d = "";
+
+                if (Math.abs(dy) < 10) {
+                    d = `M ${startX} ${startY} L ${endX} ${endY}`;
+                } else if (Math.abs(dx) < 10) {
+                    d = `M ${startX} ${startY} L ${endX} ${endY}`;
+                } else if (dx < -50) {
+                    // Smooth loopback curve
+                    const controlY = Math.min(startY, endY) - 80;
+                    d = `M ${startX} ${startY} C ${startX} ${controlY}, ${endX} ${controlY}, ${endX} ${endY}`;
+                } else {
+                    // S-curve Bezier
+                    const controlX1 = startX + Math.max(dx * 0.5, 40);
+                    const controlY1 = startY;
+                    const controlX2 = endX - Math.max(dx * 0.5, 40);
+                    const controlY2 = endY;
+                    d = `M ${startX} ${startY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${endY}`;
+                }
+
+                path.setAttribute("d", d);
+                path.setAttribute("fill", "none");
+                path.setAttribute("stroke", "#475569");
+                path.setAttribute("stroke-width", "2.5");
+                path.setAttribute("stroke-linejoin", "round");
+                path.setAttribute("marker-end", "url(#arrow)");
+                path.setAttribute("id", `conn-${conn.from}-${conn.to}`);
+
+                connectionsGroup.appendChild(path);
+
+                // Decision Branch Pill Tag (Rendered on top in labelsGroup)
+                if (conn.label) {
+                    const labelGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                    const midX = startX + (dx * 0.45);
+                    const midY = startY + (dy * 0.5) - (dx < -50 ? 40 : 0);
+
+                    const foreignObj = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+                    foreignObj.setAttribute("x", midX - 85);
+                    foreignObj.setAttribute("y", midY - 14);
+                    foreignObj.setAttribute("width", "170");
+                    foreignObj.setAttribute("height", "28");
+
+                    foreignObj.innerHTML = `
+                        <div xmlns="http://www.w3.org/1999/xhtml" class="flex items-center justify-center">
+                            <span class="bg-slate-900 border-2 border-amber-400/90 text-amber-200 text-[10.5px] font-black px-2.5 py-0.5 rounded-full shadow-2xl backdrop-blur whitespace-nowrap">
+                                ${conn.label}
+                            </span>
+                        </div>
+                    `;
+                    labelGroup.appendChild(foreignObj);
+                    labelsGroup.appendChild(labelGroup);
+                }
+            });
+        }
+
+        function renderNodes() {
+            nodesGroup.innerHTML = '';
+
+            processData.nodes.forEach(node => {
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                g.setAttribute("id", `node-group-${node.id}`);
+                g.onclick = () => selectNode(node.id - 1);
+
+                if (node.type === "start" || node.type === "end") {
+                    // Start / End Circle Nodes
+                    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                    circle.setAttribute("cx", node.x);
+                    circle.setAttribute("cy", node.y);
+                    circle.setAttribute("r", "26");
+                    circle.setAttribute("fill", node.type === "start" ? "#064e3b" : "#7f1d1d");
+                    circle.setAttribute("stroke", node.type === "start" ? "#10b981" : "#ef4444");
+                    circle.setAttribute("stroke-width", node.type === "end" ? "4" : "3");
+                    circle.setAttribute("class", "bpmn-card shadow-lg");
+                    circle.setAttribute("id", `node-shape-${node.id}`);
+                    g.appendChild(circle);
+
+                    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    text.setAttribute("x", node.x);
+                    text.setAttribute("y", node.y + 4);
+                    text.setAttribute("text-anchor", "middle");
+                    text.setAttribute("fill", "#ffffff");
+                    text.setAttribute("font-size", "10");
+                    text.setAttribute("font-weight", "800");
+                    text.textContent = node.code;
+                    g.appendChild(text);
+
+                } else if (node.type === "gateway") {
+                    // Decision Gateway (XOR Diamond)
+                    const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+                    const size = 36;
+                    const points = `${node.x},${node.y - size} ${node.x + size},${node.y} ${node.x},${node.y + size} ${node.x - size},${node.y}`;
+                    polygon.setAttribute("points", points);
+                    polygon.setAttribute("fill", "#451a03");
+                    polygon.setAttribute("stroke", "#f59e0b");
+                    polygon.setAttribute("stroke-width", "3");
+                    polygon.setAttribute("class", "gateway-node shadow-xl");
+                    polygon.setAttribute("id", `node-shape-${node.id}`);
+                    g.appendChild(polygon);
+
+                    // XOR Cross Icon
+                    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    text.setAttribute("x", node.x);
+                    text.setAttribute("y", node.y + 5);
+                    text.setAttribute("text-anchor", "middle");
+                    text.setAttribute("fill", "#fef3c7");
+                    text.setAttribute("font-size", "14");
+                    text.setAttribute("font-weight", "900");
+                    text.textContent = "✕";
+                    g.appendChild(text);
+
+                    // Question Title Card (Rendered in labelsGroup on top)
+                    const labelGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                    const foreignObj = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+                    foreignObj.setAttribute("x", node.x - 95);
+                    
+                    const labelY = node.y < 200 ? node.y + 42 : node.y - 82;
+                    foreignObj.setAttribute("y", labelY);
+                    foreignObj.setAttribute("width", "190");
+                    foreignObj.setAttribute("height", "46");
+
+                    foreignObj.innerHTML = `
+                        <div xmlns="http://www.w3.org/1999/xhtml" class="bg-amber-950/95 border-2 border-amber-500 text-amber-200 text-[11px] font-bold p-1.5 rounded-xl text-center shadow-2xl backdrop-blur leading-tight">
+                            <span class="block text-[9px] text-amber-400 font-mono uppercase font-black">${node.code} CONDICIONAL</span>
+                            ${node.title}
+                        </div>
+                    `;
+                    labelGroup.appendChild(foreignObj);
+                    labelsGroup.appendChild(labelGroup);
+
+                } else {
+                    // Activity HTML Card (210px x 110px)
+                    const foreignObj = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+                    const cardWidth = 210;
+                    const cardHeight = 110;
+                    foreignObj.setAttribute("x", node.x - (cardWidth / 2));
+                    foreignObj.setAttribute("y", node.y - (cardHeight / 2));
+                    foreignObj.setAttribute("width", cardWidth);
+                    foreignObj.setAttribute("height", cardHeight);
+
+                    const isBottleneck = isHeatmapActive && node.risk;
+
+                    foreignObj.innerHTML = `
+                        <div xmlns="http://www.w3.org/1999/xhtml" 
+                             id="node-card-${node.id}" 
+                             class="bpmn-card w-full h-full rounded-xl border-2 flex flex-col justify-between p-3 shadow-xl backdrop-blur select-none ${
+                                isBottleneck 
+                                    ? 'bg-red-950/90 border-red-500 text-red-100 bottleneck-pulse' 
+                                    : 'bg-slate-900/95 border-blue-500/70 text-slate-100 hover:border-blue-400'
+                             }">
+                            <div class="flex items-center justify-between border-b border-slate-700/80 pb-1 mb-1">
+                                <span class="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded bg-slate-800 text-cyan-400 border border-slate-700">
+                                    ${node.code}
+                                </span>
+                                ${node.risk ? '<i class="fa-solid fa-triangle-exclamation text-amber-400 text-xs" title="Sobrecarga / Traslado"></i>' : '<i class="fa-solid fa-user-check text-blue-400 text-xs"></i>'}
+                            </div>
+                            <div class="font-bold text-[12.5px] leading-snug text-white font-sans">
+                                ${node.title}
+                            </div>
+                            <div class="text-[10px] text-slate-400 font-medium truncate flex items-center gap-1.5 pt-1 border-t border-slate-800/80">
+                                <span class="w-2 h-2 rounded-full bg-blue-400 shrink-0"></span>
+                                <span class="truncate">${node.swimlane}</span>
+                            </div>
+                        </div>
+                    `;
+                    g.appendChild(foreignObj);
+                }
+
+                nodesGroup.appendChild(g);
+            });
+        }
+
+        function selectNode(index) {
+            if (index < 0 || index >= processData.nodes.length) return;
+
+            currentStepIndex = index;
+            const node = processData.nodes[index];
+
+            // Reset previous highlights
+            document.querySelectorAll('.bpmn-card').forEach(el => el.classList.remove('active-node', 'ring-3', 'ring-cyan-400'));
+            
+            const activeCard = document.getElementById(`node-card-${node.id}`);
+            if (activeCard) {
+                activeCard.classList.add('active-node', 'ring-3', 'ring-cyan-400');
+            }
+
+            // Highlight connections flow
+            document.querySelectorAll('path[id^="conn-"]').forEach(p => {
+                p.setAttribute('stroke', '#475569');
+                p.setAttribute('stroke-width', '2.5');
+                p.classList.remove('active-flow');
+            });
+
+            // Highlight current step connection
+            if (index > 0) {
+                const prevNode = processData.nodes[index - 1];
+                const activeConn = document.getElementById(`conn-${prevNode.id}-${node.id}`);
+                if (activeConn) {
+                    activeConn.setAttribute('stroke', '#38bdf8');
+                    activeConn.setAttribute('stroke-width', '4');
+                    activeConn.classList.add('active-flow');
+                }
+            }
+
+            // Pan Viewport to Keep Selected Node Centered
+            const viewportWidth = viewport.clientWidth;
+            panX = (viewportWidth / 2) - (node.x * scale);
+            updateTransform();
+
+            // Populate Inspector Panel
+            document.getElementById('nodeIdBadge').textContent = node.code;
+            
+            const content = document.getElementById('nodeDetailsContent');
+            content.innerHTML = `
+                <div class="space-y-3.5">
+                    <div class="bg-slate-800/90 p-3.5 rounded-2xl border border-slate-700/80 shadow-md">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[10px] font-extrabold uppercase tracking-wider text-cyan-400 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800/60">
+                                ${node.swimlane}
+                            </span>
+                            <span class="text-[10px] text-slate-400 font-mono capitalize">${node.type}</span>
+                        </div>
+                        <h3 class="text-base font-extrabold text-white mb-2 leading-snug">${node.title}</h3>
+                        <p class="text-slate-300 leading-relaxed text-xs">${node.desc}</p>
+                    </div>
+
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-400">Responsable:</span>
+                            <span class="font-bold text-slate-200">${node.swimlane}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-400">Tipo de Elemento:</span>
+                            <span class="font-bold text-blue-400 uppercase">${node.type}</span>
+                        </div>
+                        ${node.risk ? `
+                            <div class="mt-2 bg-red-950/70 border border-red-500/50 p-2.5 rounded-lg text-red-300 text-xs flex gap-2 items-start">
+                                <i class="fa-solid fa-triangle-exclamation text-red-400 text-sm mt-0.5"></i>
+                                <div>
+                                    <strong class="block text-red-200 font-bold">Punto Crítico de Ineficiencia:</strong>
+                                    Sobrecarga directa sobre el Encargado del taller de confecciones o desplazamiento innecesario por la ciudad.
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div class="bg-slate-800/40 p-3 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Observación Operativa AS-IS:</span>
+                        <p class="text-slate-300 italic text-xs leading-relaxed">${node.details}</p>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('stepCounter').textContent = `Paso: ${index + 1} / ${processData.nodes.length}`;
+        }
+
+        function togglePlay() {
+            if (isPlaying) {
+                clearInterval(playInterval);
+                isPlaying = false;
+                document.getElementById('playIcon').className = 'fa-solid fa-play text-xs';
+                document.getElementById('playText').textContent = 'Simular Paso a Paso';
+            } else {
+                isPlaying = true;
+                document.getElementById('playIcon').className = 'fa-solid fa-pause text-xs';
+                document.getElementById('playText').textContent = 'Pausar Simulación';
+
+                if (currentStepIndex >= processData.nodes.length - 1) {
+                    currentStepIndex = -1;
+                }
+
+                playInterval = setInterval(() => {
+                    if (currentStepIndex < processData.nodes.length - 1) {
+                        selectNode(currentStepIndex + 1);
+                    } else {
+                        togglePlay();
+                    }
+                }, 2400);
+            }
+        }
+
+        document.getElementById('btnPlay').onclick = togglePlay;
+        document.getElementById('btnNext').onclick = () => selectNode(Math.min(currentStepIndex + 1, processData.nodes.length - 1));
+        document.getElementById('btnPrev').onclick = () => selectNode(Math.max(currentStepIndex - 1, 0));
+
+        // Heatmap Risk Filter Toggle
+        document.getElementById('btnHeatmap').onclick = () => {
+            isHeatmapActive = !isHeatmapActive;
+            const btn = document.getElementById('btnHeatmap');
+            if (isHeatmapActive) {
+                btn.classList.add('bg-amber-600/30', 'border-amber-500', 'text-amber-200');
+            } else {
+                btn.classList.remove('bg-amber-600/30', 'border-amber-500', 'text-amber-200');
+            }
+            renderNodes();
+            if (currentStepIndex >= 0) selectNode(currentStepIndex);
+        };
+
+        // Window Initialization
+        window.onload = function() {
+            renderSwimlanes();
+            renderConnections();
+            renderNodes();
+            updateTransform();
+            selectNode(0);
+        };
+    </script>
+</body>
+</html>
